@@ -1,0 +1,51 @@
+name = "forevye-nexus"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+
+# Statik arayüz public/ klasöründen sunulur; yalnızca /api/* istekleri Worker'dan geçer.
+# Statik dosyaların güvenlik başlıkları public/_headers dosyasındadır.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "forevye-nexus"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "AVATARS"
+bucket_name = "forevye-nexus-avatars"
+
+# Gizli olmayan, yapılandırılabilir değerler. Para birimi adı (FN) geçicidir.
+# Parasal değerler "minor unit" (1 FN = 100) cinsindendir.
+[vars]
+ENVIRONMENT = "production"
+CURRENCY_CODE = "FN"
+MAX_TRANSFER_MINOR = "500000"
+DAILY_TRANSFER_LIMIT_MINOR = "1500000"
+REAUTH_THRESHOLD_MINOR = "100000"
+MAX_CARDS = "5"
+SESSION_TTL_DAYS = "14"
+OLD_NAME_RESERVE_DAYS = "30"
+EMAIL_PROVIDER = "resend"
+EMAIL_FROM = "FOREVYE NEXUS <no-reply@example.com>"
+
+# Test/staging ortamı: ayrı D1 ve R2 kullanılır, üretim verisiyle karıştırılmaz.
+[env.staging]
+name = "forevye-nexus-staging"
+[env.staging.vars]
+ENVIRONMENT = "staging"
+CURRENCY_CODE = "FN"
+EMAIL_PROVIDER = "console"
+DEV_EXPOSE_CODES = "true"
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "forevye-nexus-staging"
+database_id = "REPLACE_WITH_STAGING_D1_ID"
+migrations_dir = "migrations"
+[[env.staging.r2_buckets]]
+binding = "AVATARS"
+bucket_name = "forevye-nexus-avatars-staging"
