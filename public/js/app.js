@@ -4,6 +4,7 @@ import { state, refreshMe, setHide, cur, initial } from './state.js';
 import { renderCard } from './cardview.js';
 import { opsMenu, txList, txRow, sendFlow, giftFlow } from './views-ops.js';
 import { cardsList, cardEditor, vaultView } from './views-cards.js';
+import { marketView, marketMini } from './views-market.js';
 
 const root = document.getElementById('app');
 const LOGO = '/assets/logo.svg';
@@ -86,7 +87,7 @@ function authView(initialMode = 'login') {
 }
 
 // ---------- Kabuk + gezinme ----------
-const NAV = [['#/home', '⌂', 'Ana Sayfa'], ['#/ops', '⇄', 'İşlemler'], ['#/cards', '▭', 'Kartlarım'], ['#/profile', '☺', 'Profil']];
+const NAV = [['#/home', '⌂', 'Ana Sayfa'], ['#/ops', '⇄', 'İşlemler'], ['#/market', '💎', 'Borsa'], ['#/cards', '▭', 'Kartlarım'], ['#/profile', '☺', 'Profil']];
 function shell(activeHash) {
   const screen = h('main', { class: 'screen', id: 'screen' });
   const nav = h('nav', { class: 'nav', 'aria-label': 'Ana gezinme' }, h('div', { class: 'nav-in' }, NAV.map(([href, ic, label]) =>
@@ -110,9 +111,10 @@ function homeView(screen) {
   mount(screen, topbar(),
     h('h2', { text: `Merhaba, ${me.user.username}` }), h('div', { style: { height: '10px' } }),
     me.user.suspended ? h('div', { class: 'notice bad', role: 'alert', text: 'Hesabınız askıda. Transfer ve yükleme yapılamaz. Ayrıntı için destekle iletişime geçin.' }) : null,
-    h('div', { class: 'balance' }, h('div', { class: 'row between' }, h('span', { class: 'muted', text: 'Toplam sanal bakiye' }), eye), amt, h('span', { class: 'chip', text: 'Oyun içi sanal bakiye' })),
+    h('div', { class: 'balance' }, h('div', { class: 'row between' }, h('span', { class: 'muted', text: 'FN bakiyesi' }), eye), amt, h('span', { class: 'chip', text: 'FN • oyun içi para birimi' })),
     me.default_card ? h('a', { href: `#/cards/${me.default_card.id}`, style: { display: 'block', marginBottom: '14px' } }, renderCard(me.default_card.design, me.default_card)) : null,
-    h('div', { class: 'grid4' }, q('#/ops/send', '↗', 'Para gönder'), q('#/ops', '⇄', 'İşlemler'), q('#/cards', '▭', 'Kartlarım'), q('#/notifications', '🔔', 'Bildirimler')),
+    h('div', { class: 'grid4' }, q('#/ops/send', '↗', 'Para gönder'), q('#/market', '💎', 'Borsa'), q('#/ops', '⇄', 'İşlemler'), q('#/cards', '▭', 'Kartlarım')),
+    marketMini(),
     me.announcements.length ? h('div', { class: 'panel' }, h('h3', { text: 'Duyurular' }), me.announcements.map((a) => h('div', { class: 'item', style: { display: 'block' } }, h('div', { class: 'strong', text: a.title }), h('div', { class: 'muted small', text: a.body })))) : null,
     h('div', { class: 'panel' }, h('div', { class: 'row between' }, h('h3', { text: 'Son işlemler' }), h('a', { href: '#/ops/history', text: 'Tümünü gör' })), recent),
     h('p', { class: 'virtual', text: 'Sanal oyun ekonomisi • gerçek para değildir' }));
@@ -185,7 +187,7 @@ async function route() {
   const hash = location.hash || '#/home';
   const parts = hash.slice(2).split('/');
   const top = parts[0];
-  const active = { home: '#/home', ops: '#/ops', cards: '#/cards', profile: '#/profile', notifications: '#/profile', vault: '#/profile' }[top] || '#/home';
+  const active = { home: '#/home', ops: '#/ops', market: '#/market', cards: '#/cards', profile: '#/profile', notifications: '#/profile', vault: '#/profile' }[top] || '#/home';
   const screen = shell(active);
   scrollTo(0, 0);
   if (top === 'ops') {
@@ -195,6 +197,7 @@ async function route() {
     if (parts[1] === 'gift') return giftFlow(screen);
     return opsMenu(screen);
   }
+  if (top === 'market') return marketView(screen);
   if (top === 'cards') return parts[1] ? cardEditor(screen, parts[1]) : cardsList(screen);
   if (top === 'profile') return parts[1] === 'security' ? securityView(screen) : profileView(screen);
   if (top === 'notifications') return notificationsView(screen);

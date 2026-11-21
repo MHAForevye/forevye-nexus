@@ -22,6 +22,11 @@ export const DISPLAY_NAME_MAX = 24;
 export const LABEL_MAX = 30;
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+// Marka, kart kimliği ve ad yazısı her zeminde okunabilir kalmalı (şartname bölüm 6): yazı rengi her zemin rengine karşı >= 3:1 olmalı.
+export const MIN_CONTRAST = 3;
+const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+const lum = (h) => 0.2126 * lin(parseInt(h.slice(1, 3), 16)) + 0.7152 * lin(parseInt(h.slice(3, 5), 16)) + 0.0722 * lin(parseInt(h.slice(5, 7), 16));
+export const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
 
 export function defaultDesign() {
@@ -76,6 +81,12 @@ export function validateDesign(d) {
   if (!PATTERNS.includes(d.pattern)) errors.push('Geçersiz desen.');
   if (typeof d.accent !== 'string' || !HEX.test(d.accent)) errors.push('Vurgu rengi geçersiz.');
   if (typeof d.textColor !== 'string' || !HEX.test(d.textColor)) errors.push('Yazı rengi geçersiz.');
+
+  if (bg && Array.isArray(bg.colors) && typeof d.textColor === 'string' && HEX.test(d.textColor)
+    && bg.colors.every((c) => typeof c === 'string' && HEX.test(c))
+    && bg.colors.some((c) => contrast(d.textColor, c) < MIN_CONTRAST)) {
+    errors.push('Yazı rengi zeminle yeterli kontrast sağlamıyor; marka ve kart bilgileri okunamaz hale gelir. Daha açık veya daha koyu bir yazı rengi seçin.');
+  }
 
   const decor = d.decor ?? [];
   if (!Array.isArray(decor) || decor.length > MAX_DECOR) errors.push(`En fazla ${MAX_DECOR} süs nesnesi eklenebilir.`);

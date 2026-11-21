@@ -12,6 +12,7 @@ export const ACHIEVEMENTS = {
   first_transfer_received: { title: 'İlk alım', desc: 'İlk transferini aldın.' },
   first_purchase: { title: 'İlk alışveriş', desc: 'Oyun içi ilk alışverişini yaptın.' },
   first_topup: { title: 'İlk yükleme', desc: 'Hediye koduyla ilk bakiye yüklemeni yaptın.' },
+  first_crystal: { title: 'İlk kristal', desc: 'Borsadan ilk kristalini aldın.' },
   anniversary_1y: { title: 'Bir yıllık üye', desc: 'Üyeliğinin 1. yılını tamamladın.' },
 };
 

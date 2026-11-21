@@ -1,4 +1,4 @@
-import { HttpError, json, readJson, parseAmount, cfgNum, now, MIN, isSuspended } from '../lib/util.js';
+import { HttpError, json, readJson, parseAmount, cfgNum, now, MIN, isSuspended, dayKey } from '../lib/util.js';
 import { verifyPassword } from '../lib/crypto.js';
 import { rateLimit } from '../lib/rate.js';
 import { transfer, getTransferByKey } from '../lib/ledger.js';
@@ -9,6 +9,7 @@ const KINDS = {
   topup: "type = 'topup'",
   purchase: "type = 'purchase'",
   refund: "type IN ('refund','reversal','adjustment')",
+  market: "type IN ('market_buy','market_sell')",
 };
 
 export async function balanceOf(env, userId) {
@@ -53,6 +54,19 @@ export const walletRoutes = {
     const items = rows.slice(0, limit);
     const last = items[items.length - 1];
     return json({ items, next_cursor: more && last ? `${last.created_at}|${last.id}` : null, currency: env.CURRENCY_CODE || 'FN' });
+  },
+
+  // Son gönderilen kişiler (hızlı seçim). Askıdaki hesaplar listelenmez.
+  async recent(req, env, ctx, { user }) {
+    const t = now(env);
+    const rows = (await env.DB.prepare(
+      `SELECT u.username AS username, MAX(tr.created_at) AS last_at FROM transfers tr JOIN users u ON u.id = tr.recipient_id
+       WHERE tr.sender_id = ? AND tr.status = 'success' AND NOT (u.status = 'suspended' AND (u.suspended_until IS NULL OR u.suspended_until > ?))
+       GROUP BY u.id ORDER BY last_at DESC LIMIT 6`,
+    ).bind(user.id, t).all()).results;
+    const used = await env.DB.prepare('SELECT total FROM daily_usage WHERE user_id = ? AND day = ?').bind(user.id, dayKey(t)).first();
+    const cap = cfgNum(env, 'DAILY_TRANSFER_LIMIT_MINOR', 1500000);
+    return json({ recipients: rows.map((r) => r.username), daily_used: used?.total || 0, daily_limit: cap, daily_left: Math.max(0, cap - (used?.total || 0)) });
   },
 
   async lookup(req, env, ctx, { user }) {

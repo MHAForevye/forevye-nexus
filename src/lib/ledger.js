@@ -19,7 +19,7 @@ export function entryStmts(env, { ref, userId, type, amount, counterparty = null
 }
 
 // Hesap durumu aktif değilse SQL hatası üretip tüm işlemi geri alır (yarış koşullarına karşı son savunma).
-function guardActiveStmt(env, ...userIds) {
+export function guardActiveStmt(env, ...userIds) {
   const t = now(env);
   const conds = userIds.map(() => `EXISTS (SELECT 1 FROM users WHERE id = ? AND (status = 'active' OR (suspended_until IS NOT NULL AND suspended_until <= ?)))`).join(' AND ');
   const binds = userIds.flatMap((id) => [id, t]);
@@ -123,6 +123,8 @@ export async function purchase(env, { userId, amount, externalRef, desc }) {
 export async function reverseRef(env, { originalRef, type = 'reversal', actor, reason = '' }) {
   const rows = (await env.DB.prepare('SELECT * FROM ledger_entries WHERE tx_ref = ? AND status = ?').bind(originalRef, 'success').all()).results;
   if (!rows.length) throw new HttpError(404, 'not_found', 'İşlem bulunamadı.');
+  // Borsa işlemleri yalnızca bakiyeyi değil kristal envanterini de değiştirir; tek taraflı ters kayıt defteri bozar.
+  if (rows.some((r) => r.type === 'market_buy' || r.type === 'market_sell')) throw new HttpError(400, 'not_reversible', 'Borsa işlemleri ters kayıtla düzeltilemez.');
   if (rows.some((r) => r.type === 'reversal' || r.type === 'refund')) throw new HttpError(400, 'not_reversible', 'Bu kayıt zaten bir düzeltme kaydıdır.');
   const t = now(env);
   const ref = newRef('NXR');

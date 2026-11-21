@@ -31,6 +31,20 @@ function decorShape(o, color) {
   return g;
 }
 
+// Resmî logo (ikon + yazı logosu). Marka bölgesinin (PROTECTED.brand) içine sabittir; kullanıcı verisinden etkilenmez.
+const ICON_PATHS = ['M35 72 L105 28 L228 100 L228 148 L105 76 L68 98 L68 205 L35 205Z', 'M292 178 L222 222 L99 150 L99 102 L222 174 L259 152 L259 45 L292 45Z'];
+function brandMark(maskId, color) {
+  const b = PROTECTED.find((p) => p.id === 'brand');
+  const ih = 26, iw = ih * 267 / 202, wh = 22, ww = wh * 1422 / 303;
+  const iy = b.y + (b.h - ih) / 2, wx = b.x + iw + 8, wy = b.y + (b.h - wh) / 2;
+  const g = s('g', { 'data-sys': 'brand' });
+  const icon = s('svg', { x: b.x, y: iy, width: iw, height: ih, viewBox: '30 24 267 202', fill: color });
+  ICON_PATHS.forEach((d) => icon.append(s('path', { d })));
+  const mask = s('mask', { id: maskId, maskUnits: 'userSpaceOnUse', x: wx, y: wy, width: ww, height: wh }, s('image', { href: '/assets/wordmark.png', x: wx, y: wy, width: ww, height: wh }));
+  g.append(icon, mask, s('rect', { x: wx, y: wy, width: ww, height: wh, fill: color, mask: `url(#${maskId})` }));
+  return g;
+}
+
 export function renderCard(design, { display_name = '', card_token = '', status = 'active' } = {}, { showZones = false } = {}) {
   const id = `c${uid++}`;
   const svg = s('svg', { viewBox: `0 0 ${CARD_W} ${CARD_H}`, class: `card-svg${status === 'disabled' ? ' disabled' : ''}`, role: 'img', 'aria-label': `Sanal kart: ${display_name}` });
@@ -52,7 +66,7 @@ export function renderCard(design, { display_name = '', card_token = '', status 
 
   // --- Korunan katman (en üstte) ---
   const t = design.textColor;
-  body.append(s('text', { x: 16, y: 34, fill: t, 'font-size': 15, 'font-weight': 800, 'letter-spacing': 2, 'font-family': 'system-ui, sans-serif' }, document.createTextNode('FOREVYE NEXUS')));
+  body.append(brandMark(`${id}w`, t));
   body.append(s('text', { x: 306, y: 30, fill: design.accent, 'font-size': 10, 'font-weight': 700, 'letter-spacing': 1.5, 'text-anchor': 'end', 'font-family': 'system-ui, sans-serif' }, document.createTextNode('SANAL KART')));
   body.append(s('rect', { x: 16, y: 70, width: 46, height: 36, rx: 6, fill: '#d9b95b' }));
   body.append(s('path', { d: 'M16 82 H62 M16 94 H62 M31 70 V106 M47 70 V106', stroke: '#8a6d1d', 'stroke-width': 1, fill: 'none' }));

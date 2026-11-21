@@ -7,6 +7,8 @@ import { cardRoutes } from './routes/cards.js';
 import { miscRoutes } from './routes/misc.js';
 import { adminRoutes } from './routes/admin.js';
 import { internalRoutes } from './routes/internal.js';
+import { marketRoutes } from './routes/market.js';
+import { cronTick } from './lib/market.js';
 
 // [yöntem, yol, işleyici, erişim]  erişim: 'public' | 'user' | 'admin' | 'super' | 'internal'
 const R = [];
@@ -41,6 +43,13 @@ add('GET', '/api/wallet', walletRoutes.balance);
 add('GET', '/api/transactions', walletRoutes.transactions);
 add('POST', '/api/transfers/lookup', walletRoutes.lookup);
 add('POST', '/api/transfers', walletRoutes.transfer);
+
+add('GET', '/api/transfers/recent', walletRoutes.recent);
+
+add('GET', '/api/market', marketRoutes.overview);
+add('GET', '/api/market/history', marketRoutes.history);
+add('GET', '/api/market/trades', marketRoutes.trades);
+add('POST', '/api/market/trade', marketRoutes.trade);
 
 add('GET', '/api/cards', cardRoutes.list);
 add('POST', '/api/cards', cardRoutes.create);
@@ -127,5 +136,9 @@ export default {
       console.error('unhandled', err && err.stack ? err.stack : err);
       return json({ error: { code: 'server_error', message: 'Beklenmeyen bir hata oluştu.' } }, 500, SEC);
     }
+  },
+  // Cloudflare Cron Trigger (wrangler.toml [triggers]): kristal fiyatını gerçek altından yeniler.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(cronTick(env));
   },
 };

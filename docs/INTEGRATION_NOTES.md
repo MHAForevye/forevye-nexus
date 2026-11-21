@@ -26,3 +26,10 @@ Ayrı editör bu dosyayı içe aktarıp `validateDesign` kullanmalı; kaydetme `
 
 ## 3b. Logo
 `public/assets/logo.svg` YER TUTUCUDUR. Resmî logoyu aynı dosya adıyla koyun.
+
+## 3c. Kart editörü ile bağlama planı (sonraki aşama)
+Bugün iki ayrı kart modeli var: bu depodaki sözleşme v1 (320×200, `decor` listesi) ve `forevye_nexus_bank` editörünün modeli (856×540, `layers[]`, `userDisplayName`, `chipStyle`, `nameStyle`).
+Önerilen yol: editörün `js/rules.js` dosyası (DOM'suz, `module.exports` var) Worker'da `validateDesign` olarak kullanılır; `cards.design_json` bu şemayı taşır, `design_version` aynen kalır. Marka/çip/kart bilgisi **veri modelinde yoktur**, çizimde sistemden eklenir; bu yüzden kullanıcı bunları silemez/taşıyamaz. Geçişte `shared/card-contract.js` yerine editör kuralları + `FNXRender` kullanılır, eski v1 kartlar için bir kerelik dönüştürücü yazılır.
+
+## 4. Kristal borsası
+Altın fiyat kaynağı ve parametreler için README'deki "Para birimi ve Kristal Borsası" bölümüne bakın. Oyun içi mağaza kristalle ödeme isterse `POST /api/internal/purchase` FN düşer; kristal→FN dönüşümü kullanıcı tarafından borsadan yapılır.

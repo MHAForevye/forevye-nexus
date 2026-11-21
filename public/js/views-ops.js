@@ -10,6 +10,8 @@ const TYPE = {
   refund: () => ({ ico: '↺', title: 'İade' }),
   reversal: () => ({ ico: '↺', title: 'Düzeltme kaydı' }),
   adjustment: () => ({ ico: '⚙', title: 'Bakiye düzeltmesi' }),
+  market_buy: () => ({ ico: '💎', title: 'Kristal alımı' }),
+  market_sell: () => ({ ico: '💎', title: 'Kristal satışı' }),
 };
 const STATUS = { success: 'Başarılı', pending: 'Bekliyor', failed: 'Başarısız', cancelled: 'İptal edildi' };
 
@@ -30,7 +32,8 @@ export function opsMenu(screen) {
     h('div', { class: 'avatar', text: ico }), h('div', { class: 'grow' }, h('div', { class: 't', text: title }), h('div', { class: 'muted small', text: sub })), h('span', { class: 'muted', text: '›' }));
   mount(screen, h('h1', { text: 'İşlemler' }), h('div', { class: 'panel' }, h('ul', { class: 'list' },
     link('#/ops/send', '↗', 'Para gönder', 'Başka bir kullanıcıya sanal bakiye gönder'),
-    link('#/ops/history', '☰', 'İşlem geçmişi', 'Gelen/giden transferler, alışveriş, iade'),
+    link('#/market', '💎', 'Kristal Borsası', 'Kristal al/sat; fiyat gerçek altını izler'),
+    link('#/ops/history', '☰', 'İşlem geçmişi', 'Transfer, borsa, alışveriş, iade'),
     link('#/ops/gift', '🎁', 'Hediye kartı kullan', 'Kodunu gir, bakiyene yükle'),
     link('#/ops/moves', '⇅', 'Bakiye hareketleri', 'Giriş/çıkışları filtrele'))),
     h('p', { class: 'virtual', text: 'Tüm bakiye ve işlemler sanal oyun ekonomisine aittir; gerçek para değildir.' }));
@@ -71,7 +74,7 @@ export function txList(screen, { moves }) {
   mount(screen,
     h('a', { class: 'back', href: '#/ops', text: '‹ İşlemler' }),
     h('h1', { text: moves ? 'Bakiye hareketleri' : 'İşlem geçmişi' }),
-    seg([['', 'Tümü'], ['transfer', 'Transfer'], ['topup', 'Yükleme'], ['purchase', 'Alışveriş'], ['refund', 'İade/düzeltme']], 'kind'),
+    seg([['', 'Tümü'], ['transfer', 'Transfer'], ['topup', 'Yükleme'], ['purchase', 'Alışveriş'], ['market', 'Borsa'], ['refund', 'İade/düzeltme']], 'kind'),
     moves ? seg([['', 'Hepsi'], ['in', 'Giriş'], ['out', 'Çıkış']], 'dir') : null,
     holder, more);
   reload();
@@ -82,6 +85,8 @@ export function sendFlow(screen) {
   const s = { step: 1, recipient: '', amountStr: '', key: null, result: null };
   const step = (n) => { s.step = n; draw(); };
   const c = state.me.config;
+  let info = { recipients: [], daily_left: c.daily_limit, daily_limit: c.daily_limit };
+  api.get('/api/transfers/recent').then((d) => { info = d; if (s.step === 1) drawRecipient(); else if (s.step === 2) drawAmount(); }).catch(() => {});
 
   function draw() {
     if (s.step === 1) return drawRecipient();
@@ -95,6 +100,7 @@ export function sendFlow(screen) {
     const inp = h('input', { type: 'text', autocomplete: 'off', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', placeholder: 'kullanici_adi', value: s.recipient, maxlength: '20' });
     const err = h('p', { class: 'err-text', role: 'alert' });
     const btn = h('button', { class: 'btn primary block', type: 'submit', text: 'Alıcıyı bul' });
+    const recent = info.recipients.length ? h('div', {}, h('p', { class: 'muted small', text: 'Son gönderdiklerin' }), h('div', { class: 'chips' }, info.recipients.map((u) => h('button', { type: 'button', text: `@${u}`, onClick: () => { inp.value = u; form.requestSubmit(); } })))) : null;
     const form = h('form', { onSubmit: (e) => { e.preventDefault(); busy(btn, async () => {
       err.textContent = '';
       try {
@@ -103,7 +109,7 @@ export function sendFlow(screen) {
         s.recipient = r.username; step(2);
       } catch (ex) { err.textContent = ex.message; }
     }); } }, field('Alıcının hesap kullanıcı adı', inp, 'Kart üzerindeki isim değil, benzersiz kullanıcı adı girilir.'), err, btn);
-    mount(screen, head('Para gönder'), form);
+    mount(screen, head('Para gönder'), recent, form);
     inp.focus();
   }
 
@@ -116,10 +122,12 @@ export function sendFlow(screen) {
       const minor = Math.round(Number(v) * 100);
       if (minor > c.max_transfer) { err.textContent = `İşlem başına en fazla ${money(c.max_transfer, cur())} gönderebilirsiniz.`; return; }
       if (minor > state.me.balance) { err.textContent = 'Yetersiz bakiye.'; return; }
+      if (minor > info.daily_left) { err.textContent = `Bugün en fazla ${money(info.daily_left, cur())} daha gönderebilirsiniz.`; return; }
       s.amountStr = v; s.key = null; step(3);
     } },
       h('div', { class: 'panel row' }, h('div', { class: 'avatar', text: initial(s.recipient) }), h('div', { class: 'grow' }, h('div', { class: 'muted small', text: 'Alıcı' }), h('div', { class: 'strong', text: `@${s.recipient}` }))),
-      field(`Tutar (${cur()})`, inp, `Kullanılabilir: ${money(state.me.balance, cur())}`), err,
+      field(`Tutar (${cur()})`, inp, `Kullanılabilir: ${money(state.me.balance, cur())} • Bugün kalan limit: ${money(info.daily_left, cur())}`),
+      h('div', { class: 'chips' }, [['10', 1000], ['50', 5000], ['100', 10000], ['Maks', Math.min(state.me.balance, c.max_transfer, info.daily_left)]].map(([l, minor]) => h('button', { type: 'button', text: l === 'Maks' ? 'Maks' : `${l} FN`, onClick: () => { inp.value = (minor / 100).toFixed(2).replace('.', ','); } }))), err,
       h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', text: 'Geri', onClick: () => step(1) }), h('button', { class: 'btn primary grow', type: 'submit', text: 'Devam' })));
     mount(screen, head('Tutar'), form);
     inp.focus();
