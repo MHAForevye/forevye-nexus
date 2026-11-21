@@ -15,9 +15,7 @@ database_name = "forevye-nexus"
 database_id = "1d77f916-5264-4801-bcdb-075e50c928ed"
 migrations_dir = "migrations"
 
-[[r2_buckets]]
-binding = "AVATARS"
-bucket_name = "forevye-nexus-avatars"
+# R2 (avatar depolama) şimdilik kapalı; etkinleştirince geri eklenir.
 
 # Kristal fiyatını gerçek altından yenileyen zamanlanmış görev (5 dakikada bir).
 [triggers]
@@ -57,6 +55,3 @@ binding = "DB"
 database_name = "forevye-nexus-staging"
 database_id = "REPLACE_WITH_STAGING_D1_ID"
 migrations_dir = "migrations"
-[[env.staging.r2_buckets]]
-binding = "AVATARS"
-bucket_name = "forevye-nexus-avatars-staging"
